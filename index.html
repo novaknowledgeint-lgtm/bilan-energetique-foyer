@@ -70,7 +70,7 @@
           <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
-          Charger un scénario exemple (Foyer mauricien)
+          Charger un scénario exemple (Foyer Standard)
         </button>
 
         <button id="btnClearAll" type="button" class="px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5" title="Revenir à un graphique vierge sans appareil ni PV">
@@ -486,7 +486,7 @@
 
       const CATEGORY_ORDER = ['froid', 'numerique', 'mobilite', 'lavage', 'thermique'];
 
-      // Scénario pédagogique exemple (Foyer mauricien moyen, chargé à la demande via le bouton)
+      // Scénario pédagogique exemple (Foyer Standard moyen, chargé à la demande via le bouton)
       const EXAMPLE_APPLIANCES = [
         { id: 'mr-1', name: 'Box Internet, veilles & base', category: 'froid', power: 40, start: 0.0, duration: 24.0 },
         { id: 'mr-2', name: 'Réfrigérateur-congélateur', category: 'froid', power: 120, start: 0.0, duration: 24.0 },
@@ -1191,7 +1191,7 @@
           tbody.innerHTML = `
             <tr>
               <td colspan="7" class="py-8 text-center text-sm text-slate-400">
-                Aucun appareil enregistré pour le moment. Utilisez le formulaire à gauche ou cliquez sur « Charger un scénario exemple (Foyer mauricien) ».
+                Aucun appareil enregistré pour le moment. Utilisez le formulaire à gauche ou cliquez sur « Charger un scénario exemple (Foyer Standard) ».
               </td>
             </tr>
           `;
@@ -1434,7 +1434,7 @@
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'simulateur_energetique_foyer_mauricien_pv.html';
+          a.download = 'simulateur_energetique_foyer_Standard_pv.html';
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -1451,7 +1451,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'configuration_energie_foyer_mauricien.json';
+        a.download = 'configuration_energie_foyer_Standard.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

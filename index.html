@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulateur Énergétique Domestique 24h & Solaire PV</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Police Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    input[type="range"] {
+      accent-color: #2563eb;
+    }
+    .pv-slider {
+      accent-color: #d97706 !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+  <!-- En-tête principal -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
+              Profil Énergétique Domestique <span class="text-blue-600">E = P × Δt</span>
+            </h1>
+            <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+              Bilan 24h & Solaire PV
+            </span>
+          </div>
+          <p class="text-xs text-slate-500">
+            Empilement horaire 00h00 – 23h59, bilans en Wh / kWh & autoconsommation solaire PV
+          </p>
+        </div>
+      </div>
+
+      <!-- Actions globales : Scénario exemple, Tout effacer, JSON, Export HTML -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btnLoadExample" type="button" class="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition flex items-center gap-1.5" title="Charger un jeu d'appareils représentatif d'un foyer">
+          <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          Charger un scénario exemple (Foyer mauricien)
+        </button>
+
+        <button id="btnClearAll" type="button" class="px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5" title="Revenir à un graphique vierge sans appareil ni PV">
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Tout effacer (Vierge)
+        </button>
+
+        <label class="px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5 cursor-pointer" title="Importer une configuration JSON">
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Importer JSON
+          <input id="inputImportJson" type="file" accept=".json" class="hidden" />
+        </label>
+
+        <button id="btnExportJson" type="button" class="px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5" title="Sauvegarder les appareils au format JSON">
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+          </svg>
+          JSON
+        </button>
+
+        <button id="btnExportHtml" type="button" class="px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition flex items-center gap-1.5" title="Télécharger cette application avec vos données en fichier .html autonome">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Exporter en .html
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification flottante -->
+  <div id="toastBanner" class="fixed bottom-5 right-5 z-50 hidden transform transition-all duration-300 translate-y-2 opacity-0">
+    <div class="bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2.5 border border-slate-700">
+      <span id="toastIcon" class="text-emerald-400 font-bold">✓</span>
+      <span id="toastMessage">Action effectuée</span>
+    </div>
+  </div>
+
+  <!-- Contenu principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Bandeau de paramètres rapides : Solaire PV + Empilement vertical -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+      <!-- Bloc 1 : Installation Solaire PV -->
+      <div class="lg:col-span-7 bg-white rounded-2xl border border-amber-200/80 shadow-sm p-4 flex flex-col justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2.5">
+            <span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </span>
+            <div>
+              <h2 class="text-sm font-bold text-slate-900">Production Solaire Photovoltaïque <span class="font-mono text-amber-700">P<sub>PV</sub>(t)</span></h2>
+              <p class="text-xs text-slate-500">Superposer une courbe de production solaire sur le profil de charge</p>
+            </div>
+          </div>
+
+          <!-- Interrupteur Activer / Désactiver PV -->
+          <label class="inline-flex items-center gap-2.5 cursor-pointer select-none bg-amber-50/80 px-3 py-1.5 rounded-xl border border-amber-200">
+            <input id="togglePvActive" type="checkbox" class="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500 cursor-pointer" />
+            <span id="pvActiveLabel" class="text-xs font-bold text-slate-700">Solaire PV désactivé</span>
+          </label>
+        </div>
+
+        <div id="pvControlsBody" class="space-y-3 transition-opacity">
+          <!-- Boutons de sélection de puissance crête -->
+          <div class="grid grid-cols-4 gap-2" role="group" aria-label="Puissance crête PV">
+            <button type="button" data-pv="3" class="pv-btn py-2 px-2 rounded-xl text-xs font-semibold border transition text-center">
+              3 kWc
+            </button>
+            <button type="button" data-pv="5" class="pv-btn py-2 px-2 rounded-xl text-xs font-semibold border transition text-center">
+              5 kWc
+            </button>
+            <button type="button" data-pv="10" class="pv-btn py-2 px-2 rounded-xl text-xs font-semibold border transition text-center">
+              10 kWc
+            </button>
+            <button type="button" data-pv="15" class="pv-btn py-2 px-2 rounded-xl text-xs font-semibold border transition text-center">
+              15 kWc
+            </button>
+          </div>
+
+          <!-- Curseur ensoleillement / météo -->
+          <div class="flex items-center justify-between gap-3 pt-1 border-t border-slate-100">
+            <label for="pvEfficiency" class="text-xs text-slate-600 font-medium whitespace-nowrap">
+              Facteur d'ensoleillement / météo :
+            </label>
+            <input id="pvEfficiency" type="range" min="20" max="100" step="5" value="85" class="pv-slider w-full h-1.5 bg-amber-100 rounded-lg cursor-pointer" />
+            <span id="pvEfficiencyVal" class="text-xs font-bold text-amber-700 w-10 text-right">85%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloc 2 : Ordre d'empilement vertical & découpage géométrique -->
+      <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between">
+        <div class="flex items-center gap-2.5 mb-2">
+          <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7" />
+            </svg>
+          </span>
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">Empilement Vertical des Rectangles</h2>
+            <p class="text-xs text-slate-500">Ordre d'empilement (de la base vers le sommet)</p>
+          </div>
+        </div>
+
+        <div class="space-y-2.5">
+          <select id="stackOrder" aria-label="Critère de tri (base vers sommet)" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+            <option value="duration_desc">Durée Δt décroissante (socle en bas)</option>
+            <option value="category">Par catégorie d'usage</option>
+            <option value="power_desc">Puissance P décroissante</option>
+            <option value="added_order">Ordre d'ajout des appareils</option>
+          </select>
+
+          <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none pt-0.5">
+            <input id="toggleSolarClip" type="checkbox" checked class="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer" />
+            <span>Découpage géométrique sous / hors courbe <span class="font-mono">P<sub>PV</sub>(t)</span></span>
+          </label>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Cartes de synthèse énergétique (uniquement grandeurs physiques) -->
+    <section class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
+      <!-- KPI 1 : Énergie totale consommée -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-medium text-slate-500">Énergie consommée E<sub>tot</sub></p>
+        <p id="kpiTotalKwh" class="text-xl font-bold text-slate-900 mt-1">0.00 kWh</p>
+        <p id="kpiTotalWh" class="text-xs font-medium text-blue-600 mt-0.5">soit 0.0 kWh / mois (30 j)</p>
+      </div>
+
+      <!-- KPI 2 : Puissance maximale appelée -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-medium text-slate-500">Puissance max P<sub>max</sub></p>
+        <p id="kpiPeakPower" class="text-xl font-bold text-indigo-600 mt-1">0 W</p>
+        <p id="kpiPeakTime" class="text-xs text-slate-500 mt-0.5">Aucun appel de puissance</p>
+      </div>
+
+      <!-- KPI 3 : Puissance moyenne sur 24h -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-medium text-slate-500">Puissance moyenne P<sub>moy</sub></p>
+        <p id="kpiAvgPower" class="text-xl font-bold text-slate-800 mt-1">0 W</p>
+        <p class="text-xs text-slate-500 mt-0.5">P<sub>moy</sub> = E<sub>tot</sub> / 24 h</p>
+      </div>
+
+      <!-- KPI 4 : Production solaire PV -->
+      <div id="cardKpiPvProd" class="bg-amber-50/70 rounded-2xl border border-amber-200 p-4 shadow-sm transition-opacity">
+        <p class="text-xs font-medium text-amber-800">Énergie solaire produite</p>
+        <p id="kpiPvProd" class="text-xl font-bold text-amber-700 mt-1">0.00 kWh</p>
+        <p id="kpiPvMax" class="text-xs text-amber-700/80 mt-0.5">PV désactivé</p>
+      </div>
+
+      <!-- KPI 5 : Énergie autoconsommée directement -->
+      <div id="cardKpiAuto" class="bg-emerald-50/70 rounded-2xl border border-emerald-200 p-4 shadow-sm transition-opacity">
+        <p class="text-xs font-medium text-emerald-800">Autoconsommée (sous courbe)</p>
+        <p id="kpiAutoKwh" class="text-xl font-bold text-emerald-700 mt-1">0.00 kWh</p>
+        <p id="kpiAutoRates" class="text-xs text-emerald-700/90 mt-0.5">Couverture : 0% | Conso PV : 0%</p>
+      </div>
+
+      <!-- KPI 6 : Réseau soutiré & Surplus solaire -->
+      <div id="cardKpiGrid" class="bg-blue-50/70 rounded-2xl border border-blue-200 p-4 shadow-sm transition-opacity">
+        <p class="text-xs font-medium text-blue-800">Soutirée au réseau</p>
+        <p id="kpiGridImport" class="text-xl font-bold text-blue-700 mt-1">0.00 kWh</p>
+        <p id="kpiGridExport" class="text-xs font-semibold text-amber-700 mt-0.5">Surplus PV : 0.00 kWh</p>
+      </div>
+    </section>
+
+    <!-- Zone Graphique Principale : Empilement P * Δt sur 24h + Courbe PV -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900">
+            Empilement journalier des puissances <span class="font-mono text-blue-600">P(t)</span> & aire énergétique <span class="font-mono text-blue-600">E = ∑ Pᵢ · Δtᵢ</span>
+          </h2>
+          <p class="text-xs text-slate-500">
+            Chaque rectangle a pour hauteur la puissance <span class="font-mono">P</span> (W) et pour largeur la durée <span class="font-mono">Δt</span> (h) : son aire vaut l'énergie <span class="font-mono">E = P × Δt</span>.
+          </p>
+        </div>
+
+        <!-- Légende interactive des catégories + Courbe PV -->
+        <div id="categoryLegend" class="flex flex-wrap items-center gap-2 text-xs"></div>
+      </div>
+
+      <!-- Encart pédagogique de lecture géométrique -->
+      <div class="mb-4 p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-amber-50 via-yellow-50/70 to-slate-50 border border-amber-200/90 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div class="flex items-start gap-2.5 text-xs text-slate-700 leading-relaxed">
+          <span class="text-base leading-none mt-0.5" aria-hidden="true">📐</span>
+          <div>
+            <strong class="text-amber-900 font-semibold">Lecture géométrique de la couverture solaire :</strong>
+            L'aire d'un rectangle vaut <span class="font-mono font-semibold text-slate-900">E = P × Δt</span>. Lorsqu'on active la courbe solaire <span class="font-mono text-amber-800">P<sub>PV</sub>(t)</span>, <strong>l'énergie d'un appareil est fournie par le solaire uniquement pour la surface de son rectangle située SOUS la courbe <span class="font-mono">P<sub>PV</sub>(t)</span></strong>. Tout dépassement au-dessus de la courbe (ou hors heures d'ensoleillement) est soutiré au réseau électrique.
+          </div>
+        </div>
+        <div class="flex items-center gap-3 text-[11px] font-medium shrink-0 bg-white/90 px-3 py-1.5 rounded-lg border border-amber-200/70">
+          <span class="flex items-center gap-1.5 text-slate-800">
+            <span class="w-3.5 h-3.5 rounded bg-sky-500 inline-block"></span>
+            Sous P<sub>PV</sub>(t) = Solaire
+          </span>
+          <span class="flex items-center gap-1.5 text-slate-500">
+            <span class="w-3.5 h-3.5 rounded bg-sky-500/25 border border-dashed border-slate-400 inline-block"></span>
+            Hors P<sub>PV</sub>(t) = Réseau
+          </span>
+        </div>
+      </div>
+
+      <!-- Conteneur du graphique SVG haute précision -->
+      <div id="chartWrapper" class="relative w-full select-none">
+        <svg id="energyChart" class="w-full h-[380px] sm:h-[440px] block overflow-visible" role="img" aria-label="Graphique d'empilement de puissance sur 24 heures"></svg>
+
+        <!-- Infobulle dynamique au survol -->
+        <div id="chartTooltip" class="pointer-events-none fixed z-50 hidden bg-slate-900/95 text-white rounded-xl p-3 shadow-xl border border-slate-700 text-xs max-w-xs backdrop-blur-sm">
+        </div>
+      </div>
+
+      <!-- Pied de graphique -->
+      <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+          <span>Astuce pédagogique : décalez un appareil énergivore (chauffe-eau, lave-linge) entre 10h00 et 15h00 avec <span class="font-mono">◀ -30m</span> / <span class="font-mono">+30m ▶</span> pour faire rentrer son rectangle sous la courbe solaire.</span>
+        </div>
+        <div class="font-mono text-slate-500">
+          Réseau soutiré : <strong id="footerGridImport" class="text-slate-800">0.00 kWh</strong> · Surplus PV : <strong id="footerGridExport" class="text-amber-700">0.00 kWh</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Grille inférieure : Formulaire d'ajout à gauche + Inventaire interactif à droite -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- Formulaire d'ajout / modification d'un appareil -->
+      <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 id="formTitle" class="text-base font-bold text-slate-900">Ajouter un appareil</h3>
+          <button id="btnCancelEdit" type="button" class="hidden text-xs font-medium text-slate-500 hover:text-slate-800 underline">
+            Annuler la modification
+          </button>
+        </div>
+
+        <form id="applianceForm" class="space-y-3.5">
+          <input type="hidden" id="editApplianceId" value="" />
+
+          <div>
+            <label for="appName" class="block text-xs font-semibold text-slate-700 mb-1">Nature / Nom de l'appareil</label>
+            <input id="appName" type="text" required placeholder="Ex. Bouilloire, Lave-linge, Réfrigérateur..." class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+          </div>
+
+          <div>
+            <label for="appCategory" class="block text-xs font-semibold text-slate-700 mb-1">Catégorie d'usage</label>
+            <select id="appCategory" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+              <option value="froid">Froid & Veille</option>
+              <option value="thermique">Thermique & Eau chaude</option>
+              <option value="lavage">Lavage & Cuisson</option>
+              <option value="numerique">Numérique & Éclairage</option>
+              <option value="mobilite">Mobilité & Divers</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="appPower" class="block text-xs font-semibold text-slate-700 mb-1">Puissance P (W)</label>
+              <input id="appPower" type="number" required min="1" max="30000" step="1" placeholder="1500" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+            </div>
+            <div>
+              <label for="appDuration" class="block text-xs font-semibold text-slate-700 mb-1">Durée Δt (heures)</label>
+              <input id="appDuration" type="number" required min="0.05" max="24" step="0.05" placeholder="1.5" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label for="appStartTime" class="text-xs font-semibold text-slate-700">Heure de début (00h00 – 23h45)</label>
+              <span id="previewTimeRange" class="text-xs font-mono text-blue-600 font-medium">12h00 → 13h30</span>
+            </div>
+            <select id="appStartTime" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+              <!-- Options générées par pas de 15 minutes -->
+            </select>
+            <p class="text-[11px] text-slate-500 mt-1">
+              Si <span class="font-mono">début + Δt &gt; 24h</span>, le rectangle est automatiquement découpé à minuit en deux blocs <span class="font-mono">[t<sub>début</sub>, 24h]</span> et <span class="font-mono">[0h, t<sub>fin</sub>]</span>.
+            </p>
+          </div>
+
+          <!-- Aperçu en direct de l'énergie P * Δt -->
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <span class="text-slate-600">Aire du rectangle (<span class="font-mono">E = P × Δt</span>) :</span>
+            <span id="formEnergyPreview" class="font-bold text-slate-900">0 Wh (0.00 kWh)</span>
+          </div>
+
+          <button id="btnSubmitForm" type="submit" class="w-full py-2.5 px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Ajouter au profil 24h
+          </button>
+        </form>
+
+        <!-- Suggestions rapides d'appareils courants -->
+        <div class="mt-5 pt-4 border-t border-slate-100">
+          <p class="text-xs font-semibold text-slate-600 mb-2">Suggestions rapides d'appareils courants :</p>
+          <div class="flex flex-wrap gap-1.5" id="quickPresets"></div>
+        </div>
+      </div>
+
+      <!-- Tableau interactif des appareils -->
+      <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Inventaire des appareils (<span id="applianceCount">0</span>)</h3>
+            <p class="text-xs text-slate-500">Modifiez directement <span class="font-mono">P</span>, l'heure ou <span class="font-mono">Δt</span>, ou utilisez <span class="font-mono">◀ -30m</span> / <span class="font-mono">+30m ▶</span>.</p>
+          </div>
+
+          <!-- Filtre par catégorie et tri du tableau -->
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="tableFilterCategory" class="px-2.5 py-1.5 text-xs font-medium bg-slate-50 border border-slate-300 rounded-lg text-slate-700 outline-none">
+              <option value="all">Toutes catégories</option>
+              <option value="froid">Froid & Veille</option>
+              <option value="thermique">Thermique & Eau chaude</option>
+              <option value="lavage">Lavage & Cuisson</option>
+              <option value="numerique">Numérique & Éclairage</option>
+              <option value="mobilite">Mobilité & Divers</option>
+            </select>
+
+            <select id="tableSortBy" class="px-2.5 py-1.5 text-xs font-medium bg-slate-50 border border-slate-300 rounded-lg text-slate-700 outline-none">
+              <option value="added">Trier par : Ordre d'ajout</option>
+              <option value="start">Trier par : Heure de début</option>
+              <option value="energy">Trier par : Énergie (kWh)</option>
+              <option value="power">Trier par : Puissance (W)</option>
+              <option value="duration">Trier par : Durée (h)</option>
+              <option value="category">Trier par : Catégorie</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                <th class="py-2.5 px-2">Appareil & Catégorie</th>
+                <th class="py-2.5 px-2 text-right">Puissance P</th>
+                <th class="py-2.5 px-2 text-center">Début & Décalage</th>
+                <th class="py-2.5 px-2 text-right">Durée Δt</th>
+                <th class="py-2.5 px-2 text-center">Statut Solaire</th>
+                <th class="py-2.5 px-2 text-right">Énergie E = P×Δt</th>
+                <th class="py-2.5 px-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="applianceTableBody" class="divide-y divide-slate-100 text-xs sm:text-sm">
+              <!-- Lignes générées dynamiquement -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 mt-10 py-4 px-4 text-center text-xs text-slate-500">
+    Simulateur énergétique domestique — Modèle physique <span class="font-mono">E = P × Δt</span> sur 24h (Wh / kWh) et autoconsommation solaire PV.
+  </footer>
+
+  <!-- Données embarquées pour permettre l'export HTML autonome conservant l'état -->
+  <script id="embedded-app-state" type="application/json">null</script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // 1. DÉFINITION DES CATÉGORIES ET SCÉNARIO EXEMPLE
+      // =========================================================================
+      const CATEGORIES = {
+        froid: {
+          id: 'froid',
+          label: 'Froid & Veille',
+          color: '#0ea5e9',
+          fill: 'rgba(14, 165, 233, 0.85)',
+          badgeBg: 'bg-sky-100 text-sky-800 border-sky-200'
+        },
+        thermique: {
+          id: 'thermique',
+          label: 'Thermique & Eau chaude',
+          color: '#f97316',
+          fill: 'rgba(249, 115, 22, 0.85)',
+          badgeBg: 'bg-orange-100 text-orange-800 border-orange-200'
+        },
+        lavage: {
+          id: 'lavage',
+          label: 'Lavage & Cuisson',
+          color: '#8b5cf6',
+          fill: 'rgba(139, 92, 246, 0.85)',
+          badgeBg: 'bg-violet-100 text-violet-800 border-violet-200'
+        },
+        numerique: {
+          id: 'numerique',
+          label: 'Numérique & Éclairage',
+          color: '#10b981',
+          fill: 'rgba(16, 185, 129, 0.85)',
+          badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200'
+        },
+        mobilite: {
+          id: 'mobilite',
+          label: 'Mobilité & Divers',
+          color: '#ec4899',
+          fill: 'rgba(236, 72, 153, 0.85)',
+          badgeBg: 'bg-pink-100 text-pink-800 border-pink-200'
+        }
+      };
+
+      const CATEGORY_ORDER = ['froid', 'numerique', 'mobilite', 'lavage', 'thermique'];
+
+      // Scénario pédagogique exemple (Foyer mauricien moyen, chargé à la demande via le bouton)
+      const EXAMPLE_APPLIANCES = [
+        { id: 'mr-1', name: 'Box Internet, veilles & base', category: 'froid', power: 40, start: 0.0, duration: 24.0 },
+        { id: 'mr-2', name: 'Réfrigérateur-congélateur', category: 'froid', power: 120, start: 0.0, duration: 24.0 },
+        { id: 'mr-3', name: 'Lave-linge', category: 'lavage', power: 1200, start: 10.0, duration: 1.5 },
+        { id: 'mr-4', name: 'Chauffe-eau électrique', category: 'thermique', power: 1800, start: 12.0, duration: 1.5 },
+        { id: 'mr-5', name: 'Climatisation', category: 'thermique', power: 1100, start: 13.0, duration: 4.0 },
+        { id: 'mr-6', name: 'Éclairage, TV & ventilateurs', category: 'numerique', power: 220, start: 19.0, duration: 3.5 }
+      ];
+
+      const QUICK_PRESETS = [
+        { name: 'Réfrigérateur (24h)', category: 'froid', power: 120, start: 0.0, duration: 24.0 },
+        { name: 'Box & Veilles (24h)', category: 'froid', power: 40, start: 0.0, duration: 24.0 },
+        { name: 'Chauffe-eau (1.8 kW)', category: 'thermique', power: 1800, start: 12.0, duration: 1.5 },
+        { name: 'Lave-linge (1.2 kW)', category: 'lavage', power: 1200, start: 10.0, duration: 1.5 },
+        { name: 'Climatisation (1.1 kW)', category: 'thermique', power: 1100, start: 13.0, duration: 4.0 },
+        { name: 'Éclairage, TV & ventilos', category: 'numerique', power: 220, start: 19.0, duration: 3.5 },
+        { name: 'Recharge VE (3.7 kW)', category: 'mobilite', power: 3700, start: 11.0, duration: 3.0 }
+      ];
+
+      // =========================================================================
+      // 2. ÉTAT INITIAL VIERGE PAR DÉFAUT
+      // =========================================================================
+      function createBlankState() {
+        return {
+          appliances: [],
+          pvActive: false,
+          pvKwc: 5,
+          pvEfficiency: 85,
+          stackOrder: 'duration_desc',
+          showSolarClip: true,
+          hiddenCategories: {},
+          tableFilterCategory: 'all',
+          tableSortBy: 'added'
+        };
+      }
+
+      let state = createBlankState();
+
+      try {
+        const embeddedNode = document.getElementById('embedded-app-state');
+        if (embeddedNode && embeddedNode.textContent && embeddedNode.textContent.trim() !== 'null') {
+          const parsed = JSON.parse(embeddedNode.textContent);
+          if (parsed && Array.isArray(parsed.appliances)) {
+            state = Object.assign(createBlankState(), parsed);
+          }
+        }
+      } catch (e) {
+        console.warn('Impossible de lire l’état embarqué :', e);
+      }
+
+      // =========================================================================
+      // 3. UTILITAIRES TEMPS, FORMATAGE ET MODÈLE SOLAIRE PV
+      // =========================================================================
+      function formatHoursToHHMM(decimalHours) {
+        let h = ((decimalHours % 24) + 24) % 24;
+        let totalMinutes = Math.round(h * 60);
+        if (totalMinutes === 1440) return '24h00';
+        const hh = Math.floor(totalMinutes / 60);
+        const mm = totalMinutes % 60;
+        return String(hh).padStart(2, '0') + 'h' + String(mm).padStart(2, '0');
+      }
+
+      function formatPower(watts) {
+        if (watts >= 1000) {
+          return (watts / 1000).toFixed(2) + ' kW';
+        }
+        return Math.round(watts) + ' W';
+      }
+
+      function formatEnergy(wh) {
+        if (wh >= 1000) {
+          return (wh / 1000).toFixed(2) + ' kWh (' + Math.round(wh) + ' Wh)';
+        }
+        return Math.round(wh) + ' Wh (' + (wh / 1000).toFixed(3) + ' kWh)';
+      }
+
+      let toastTimeout = null;
+      function showToast(message, isError = false) {
+        const banner = document.getElementById('toastBanner');
+        const msgEl = document.getElementById('toastMessage');
+        const iconEl = document.getElementById('toastIcon');
+        msgEl.textContent = message;
+        iconEl.textContent = isError ? '!' : '✓';
+        iconEl.className = isError ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold';
+
+        banner.classList.remove('hidden');
+        requestAnimationFrame(() => {
+          banner.classList.remove('translate-y-2', 'opacity-0');
+        });
+
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          banner.classList.add('translate-y-2', 'opacity-0');
+          setTimeout(() => banner.classList.add('hidden'), 300);
+        }, 3200);
+      }
+
+      function getPvPowerAt(t) {
+        if (!state.pvActive || !state.pvKwc || state.pvKwc <= 0) return 0;
+        const sunrise = 6.0;
+        const sunset = 18.5;
+        if (t <= sunrise || t >= sunset) return 0;
+
+        const dayLength = sunset - sunrise;
+        const normalized = (t - sunrise) / dayLength;
+        const solarElevation = Math.sin(Math.PI * normalized);
+        if (solarElevation <= 0) return 0;
+
+        const peakWatts = state.pvKwc * 1000 * (state.pvEfficiency / 100);
+        return peakWatts * Math.pow(solarElevation, 1.25);
+      }
+
+      function getActiveSegments() {
+        const segments = [];
+        state.appliances.forEach((app, index) => {
+          if (state.hiddenCategories[app.category]) return;
+          const start = ((app.start % 24) + 24) % 24;
+          const dur = Math.min(24, Math.max(0.01, Number(app.duration) || 0));
+          const end = start + dur;
+
+          if (end <= 24) {
+            segments.push({
+              appliance: app,
+              addedIndex: index,
+              t0: start,
+              t1: end,
+              partLabel: ''
+            });
+          } else {
+            segments.push({
+              appliance: app,
+              addedIndex: index,
+              t0: start,
+              t1: 24,
+              partLabel: ' (soir)'
+            });
+            const rem = end - 24;
+            if (rem > 0.001) {
+              segments.push({
+                appliance: app,
+                addedIndex: index,
+                t0: 0,
+                t1: rem,
+                partLabel: ' (nuit)'
+              });
+            }
+          }
+        });
+        return segments;
+      }
+
+      function compareSegmentsForStack(s1, s2) {
+        const a = s1.appliance;
+        const b = s2.appliance;
+        switch (state.stackOrder) {
+          case 'power_desc':
+            return b.power - a.power || b.duration - a.duration;
+          case 'added_order':
+            return s1.addedIndex - s2.addedIndex;
+          case 'category': {
+            const idxA = CATEGORY_ORDER.indexOf(a.category);
+            const idxB = CATEGORY_ORDER.indexOf(b.category);
+            if (idxA !== idxB) return idxA - idxB;
+            return b.duration - a.duration;
+          }
+          case 'duration_desc':
+          default:
+            return b.duration - a.duration || b.power - a.power;
+        }
+      }
+
+      // =========================================================================
+      // 4. CALCUL DU PROFIL EMPILÉ EXACT ET DES BILANS ÉNERGÉTIQUES
+      // =========================================================================
+      function computeSimulation() {
+        const segments = getActiveSegments();
+
+        const breakpointSet = new Set([0, 24]);
+        segments.forEach((seg) => {
+          breakpointSet.add(Number(seg.t0.toFixed(6)));
+          breakpointSet.add(Number(seg.t1.toFixed(6)));
+        });
+        const breakpoints = Array.from(breakpointSet).sort((a, b) => a - b);
+
+        const stackedRects = [];
+        const appSolarStats = {};
+        state.appliances.forEach((a) => {
+          appSolarStats[a.id] = { totalWh: 0, solarWh: 0, gridWh: 0 };
+        });
+
+        let maxTotalPower = 0;
+        let maxPowerTime = 0;
+
+        // Intégration fine de la surface sous/hors courbe PV par rectangle (cohérente avec le clipPath continu)
+        const subStepHours = 24 / 1440;
+        for (let i = 0; i < breakpoints.length - 1; i++) {
+          const tA = breakpoints[i];
+          const tB = breakpoints[i + 1];
+          const dt = tB - tA;
+          if (dt <= 1e-6) continue;
+          const tMid = (tA + tB) / 2;
+
+          const activeHere = segments.filter((seg) => seg.t0 <= tMid && seg.t1 >= tMid);
+          activeHere.sort(compareSegmentsForStack);
+
+          const nSub = Math.max(1, Math.ceil(dt / subStepHours));
+          const hSub = dt / nSub;
+
+          let yBase = 0;
+          activeHere.forEach((seg) => {
+            const p = seg.appliance.power;
+            const yTop = yBase + p;
+            const energyWh = p * dt;
+
+            let solarWh = 0;
+            for (let k = 0; k < nSub; k++) {
+              const tSubMid = tA + (k + 0.5) * hSub;
+              const pPvSub = getPvPowerAt(tSubMid);
+              const coveredH = Math.max(0, Math.min(yTop, pPvSub) - yBase);
+              solarWh += coveredH * hSub;
+            }
+            const gridWh = Math.max(0, energyWh - solarWh);
+
+            if (appSolarStats[seg.appliance.id]) {
+              appSolarStats[seg.appliance.id].totalWh += energyWh;
+              appSolarStats[seg.appliance.id].solarWh += solarWh;
+              appSolarStats[seg.appliance.id].gridWh += gridWh;
+            }
+
+            stackedRects.push({
+              appliance: seg.appliance,
+              partLabel: seg.partLabel,
+              t0: tA,
+              t1: tB,
+              dt: dt,
+              y0: yBase,
+              y1: yTop,
+              power: p,
+              energyWh: energyWh,
+              solarWh: solarWh,
+              gridWh: gridWh,
+              solarPct: energyWh > 0 ? (solarWh / energyWh) * 100 : 0
+            });
+            yBase = yTop;
+          });
+
+          if (yBase > maxTotalPower) {
+            maxTotalPower = yBase;
+            maxPowerTime = tA;
+          }
+        }
+
+        const steps = 1440;
+        const stepHours = 24 / steps;
+        let totalConsumedKwh = 0;
+        let totalPvProdKwh = 0;
+        let totalAutoConsumedKwh = 0;
+        let totalGridImportKwh = 0;
+        let totalGridExportKwh = 0;
+        let maxPvPower = 0;
+
+        const pvCurvePoints = [];
+
+        for (let s = 0; s <= steps; s++) {
+          const t = (s / steps) * 24;
+          const tSample = Math.min(23.9999, t + stepHours * 0.5);
+
+          let pLoad = 0;
+          for (let k = 0; k < segments.length; k++) {
+            if (segments[k].t0 <= tSample && segments[k].t1 >= tSample) {
+              pLoad += segments[k].appliance.power;
+            }
+          }
+
+          const pPv = getPvPowerAt(t);
+          const pPvMid = getPvPowerAt(tSample);
+          const pAuto = Math.min(pLoad, pPvMid);
+
+          if (pPv > maxPvPower) maxPvPower = pPv;
+          pvCurvePoints.push({ t, p: pPv });
+
+          if (s < steps) {
+            const eLoad = (pLoad * stepHours) / 1000;
+            const ePv = (pPvMid * stepHours) / 1000;
+            const eAuto = (pAuto * stepHours) / 1000;
+
+            totalConsumedKwh += eLoad;
+            totalPvProdKwh += ePv;
+            totalAutoConsumedKwh += eAuto;
+            totalGridImportKwh += Math.max(0, eLoad - eAuto);
+            totalGridExportKwh += Math.max(0, ePv - eAuto);
+          }
+        }
+
+        const selfConsumptionRate = totalPvProdKwh > 0 ? (totalAutoConsumedKwh / totalPvProdKwh) * 100 : 0;
+        const selfSufficiencyRate = totalConsumedKwh > 0 ? (totalAutoConsumedKwh / totalConsumedKwh) * 100 : 0;
+
+        return {
+          stackedRects,
+          appSolarStats,
+          maxTotalPower,
+          maxPowerTime,
+          maxPvPower,
+          pvCurvePoints,
+          totalConsumedKwh,
+          totalPvProdKwh,
+          totalAutoConsumedKwh,
+          totalGridImportKwh,
+          totalGridExportKwh,
+          selfConsumptionRate,
+          selfSufficiencyRate
+        };
+      }
+
+      // =========================================================================
+      // 5. RENDU GRAPHIQUE SVG HAUTE PRÉCISION
+      // =========================================================================
+      function renderChart(sim) {
+        const svg = document.getElementById('energyChart');
+        const rect = svg.getBoundingClientRect();
+        const width = Math.max(320, rect.width || 800);
+        const height = Math.max(340, rect.height || 420);
+
+        const margin = { top: 24, right: 24, bottom: 42, left: 64 };
+        const plotW = width - margin.left - margin.right;
+        const plotH = height - margin.top - margin.bottom;
+
+        const rawMaxY = Math.max(1000, sim.maxTotalPower * 1.12, sim.maxPvPower * 1.10);
+        const yStep = rawMaxY <= 2500 ? 500 : rawMaxY <= 6000 ? 1000 : rawMaxY <= 12000 ? 2000 : 2500;
+        const maxY = Math.ceil(rawMaxY / yStep) * yStep;
+
+        const xScale = (t) => margin.left + (t / 24) * plotW;
+        const yScale = (p) => margin.top + plotH - (p / maxY) * plotH;
+
+        let html = '';
+
+        let pvAreaPath = `M ${xScale(0)} ${yScale(0)} `;
+        if (state.pvActive && sim.pvCurvePoints.length > 0) {
+          sim.pvCurvePoints.forEach((pt) => {
+            pvAreaPath += `L ${xScale(pt.t).toFixed(2)} ${yScale(pt.p).toFixed(2)} `;
+          });
+        }
+        pvAreaPath += `L ${xScale(24)} ${yScale(0)} Z`;
+
+        html += `
+          <defs>
+            <linearGradient id="pvAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.24" />
+              <stop offset="100%" stop-color="#fef3c7" stop-opacity="0.03" />
+            </linearGradient>
+            <pattern id="gridHatch" width="7" height="7" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="7" stroke="#475569" stroke-width="1.4" stroke-opacity="0.22" />
+            </pattern>
+            <clipPath id="underPvClip">
+              <path d="${pvAreaPath}" />
+            </clipPath>
+          </defs>
+        `;
+
+        html += `<rect x="${xScale(0)}" y="${margin.top}" width="${xScale(6) - xScale(0)}" height="${plotH}" fill="#f1f5f9" opacity="0.65" />`;
+        html += `<rect x="${xScale(18.5)}" y="${margin.top}" width="${xScale(24) - xScale(18.5)}" height="${plotH}" fill="#f1f5f9" opacity="0.65" />`;
+
+        for (let p = 0; p <= maxY; p += yStep) {
+          const y = yScale(p);
+          const label = p >= 1000 ? (p / 1000).toFixed(p % 1000 === 0 ? 0 : 1) + ' kW' : p + ' W';
+          html += `
+            <line x1="${margin.left}" y1="${y}" x2="${margin.left + plotW}" y2="${y}" stroke="${p === 0 ? '#94a3b8' : '#e2e8f0'}" stroke-width="${p === 0 ? 1.5 : 1}" />
+            <text x="${margin.left - 10}" y="${y + 4}" text-anchor="end" fill="#64748b" font-size="11" font-weight="500">${label}</text>
+          `;
+        }
+
+        const hourStep = width < 560 ? 3 : 2;
+        for (let h = 0; h <= 24; h += hourStep) {
+          const x = xScale(h);
+          const label = h === 24 ? '23h59' : String(h).padStart(2, '0') + 'h00';
+          html += `
+            <line x1="${x}" y1="${margin.top}" x2="${x}" y2="${margin.top + plotH}" stroke="#e2e8f0" stroke-dasharray="${h === 0 || h === 24 ? 'none' : '3,3'}" stroke-width="1" />
+            <text x="${x}" y="${margin.top + plotH + 20}" text-anchor="middle" fill="#475569" font-size="11" font-weight="500">${label}</text>
+          `;
+        }
+
+        html += `<text x="${margin.left + plotW / 2}" y="${height - 4}" text-anchor="middle" fill="#64748b" font-size="11" font-weight="600">Heure de la journée (00h00 → 23h59)</text>`;
+
+        if (state.pvActive && sim.pvCurvePoints.length > 0) {
+          html += `<path d="${pvAreaPath}" fill="url(#pvAreaGrad)" />`;
+        }
+
+        if (sim.stackedRects.length === 0 && !state.pvActive) {
+          const cx = margin.left + plotW / 2;
+          const cy = margin.top + plotH / 2;
+          html += `
+            <g pointer-events="none">
+              <rect x="${cx - 210}" y="${cy - 34}" width="420" height="68" rx="14" fill="#ffffff" fill-opacity="0.92" stroke="#cbd5e1" stroke-dasharray="5,4" />
+              <text x="${cx}" y="${cy - 6}" text-anchor="middle" fill="#334155" font-size="13" font-weight="600">
+                Graphique vierge — Prêt pour la construction
+              </text>
+              <text x="${cx}" y="${cy + 15}" text-anchor="middle" fill="#64748b" font-size="11.5">
+                Ajoutez un premier appareil ci-dessous ou cliquez sur « Charger un scénario exemple »
+              </text>
+            </g>
+          `;
+        }
+
+        const useClip = state.pvActive && state.showSolarClip;
+
+        sim.stackedRects.forEach((r, idx) => {
+          const cat = CATEGORIES[r.appliance.category] || CATEGORIES.froid;
+          const x = xScale(r.t0);
+          const w = Math.max(1.5, xScale(r.t1) - x);
+          const y = yScale(r.y1);
+          const h = Math.max(1.5, yScale(r.y0) - y);
+
+          const totalAppEnergyWh = r.appliance.power * r.appliance.duration;
+          const stats = sim.appSolarStats[r.appliance.id] || { totalWh: r.energyWh, solarWh: r.solarWh, gridWh: r.gridWh };
+          const appSolarPct = stats.totalWh > 0 ? (stats.solarWh / stats.totalWh) * 100 : 0;
+          const showLabel = w > 54 && h > 22;
+
+          html += `
+            <g class="rect-block cursor-pointer transition-opacity hover:opacity-95"
+               data-rect-idx="${idx}"
+               data-name="${escapeHtml(r.appliance.name + r.partLabel)}"
+               data-cat="${escapeHtml(cat.label)}"
+               data-color="${cat.color}"
+               data-power="${r.appliance.power}"
+               data-dur="${r.appliance.duration}"
+               data-seg-t0="${r.t0}"
+               data-seg-t1="${r.t1}"
+               data-app-wh="${totalAppEnergyWh.toFixed(1)}"
+               data-app-solar-wh="${stats.solarWh.toFixed(1)}"
+               data-app-grid-wh="${stats.gridWh.toFixed(1)}"
+               data-app-solar-pct="${appSolarPct.toFixed(0)}">
+          `;
+
+          if (useClip) {
+            html += `
+              <rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}"
+                    fill="${cat.color}" fill-opacity="0.24" rx="2" />
+              <rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}"
+                    fill="url(#gridHatch)" rx="2" />
+              <rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}"
+                    fill="${cat.color}" fill-opacity="0.92" clip-path="url(#underPvClip)" rx="2" />
+              <rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}"
+                    fill="none" stroke="#ffffff" stroke-width="1.3" rx="2" />
+            `;
+          } else {
+            html += `
+              <rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}"
+                    fill="${cat.fill}" stroke="#ffffff" stroke-width="1.2" rx="2" />
+            `;
+          }
+
+          if (showLabel) {
+            const isMainlySolar = !useClip || r.solarPct >= 50;
+            const textColor = isMainlySolar ? '#ffffff' : '#0f172a';
+            const badgeIcon = useClip ? (r.solarPct >= 99.5 ? '☀️ ' : r.solarPct > 0.5 ? '⛅ ' : '') : '';
+            html += `
+              <text x="${(x + w / 2).toFixed(2)}" y="${(y + h / 2 + 4).toFixed(2)}"
+                    text-anchor="middle" fill="${textColor}" font-size="11" font-weight="600" pointer-events="none">
+                ${badgeIcon}${escapeHtml(truncateText(r.appliance.name, Math.floor(w / 7.5)))}
+              </text>
+            `;
+          }
+
+          html += `</g>`;
+        });
+
+        if (state.pvActive && sim.pvCurvePoints.length > 0) {
+          let pvLinePath = '';
+          sim.pvCurvePoints.forEach((pt, i) => {
+            pvLinePath += `${i === 0 ? 'M' : 'L'} ${xScale(pt.t).toFixed(2)} ${yScale(pt.p).toFixed(2)} `;
+          });
+          html += `<path d="${pvLinePath}" fill="none" stroke="#ffffff" stroke-width="5.5" stroke-opacity="0.85" stroke-linecap="round" pointer-events="none" />`;
+          html += `<path d="${pvLinePath}" fill="none" stroke="#d97706" stroke-width="3.2" stroke-linecap="round" pointer-events="none" />`;
+
+          const peakX = xScale(12.25);
+          const peakY = Math.max(margin.top + 14, yScale(sim.maxPvPower) - 10);
+          html += `
+            <g pointer-events="none">
+              <rect x="${peakX - 78}" y="${peakY - 14}" width="156" height="19" rx="9.5" fill="#fef3c7" stroke="#d97706" stroke-width="1.2" />
+              <text x="${peakX}" y="${peakY - 1}" text-anchor="middle" fill="#92400e" font-size="10.5" font-weight="700">
+                ☀️ PV ${state.pvKwc} kWc (crête ${(sim.maxPvPower / 1000).toFixed(2)} kW)
+              </text>
+            </g>
+          `;
+        }
+
+        svg.innerHTML = html;
+        attachChartTooltips();
+      }
+
+      function attachChartTooltips() {
+        const tooltip = document.getElementById('chartTooltip');
+        const blocks = document.querySelectorAll('.rect-block');
+
+        blocks.forEach((el) => {
+          el.addEventListener('mousemove', (e) => {
+            const name = el.getAttribute('data-name');
+            const cat = el.getAttribute('data-cat');
+            const color = el.getAttribute('data-color');
+            const power = Number(el.getAttribute('data-power'));
+            const dur = Number(el.getAttribute('data-dur'));
+            const t0 = Number(el.getAttribute('data-seg-t0'));
+            const t1 = Number(el.getAttribute('data-seg-t1'));
+            const appWh = Number(el.getAttribute('data-app-wh'));
+            const appSolarWh = Number(el.getAttribute('data-app-solar-wh'));
+            const appGridWh = Number(el.getAttribute('data-app-grid-wh'));
+            const appSolarPct = Number(el.getAttribute('data-app-solar-pct'));
+
+            let statusBadge = '';
+            if (state.pvActive) {
+              if (appGridWh < 0.5 && appSolarWh > 0) {
+                statusBadge = `<span class="inline-block px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 font-semibold text-[11px]">☀️ 100 % fourni par le solaire</span>`;
+              } else if (appSolarWh >= 0.5) {
+                statusBadge = `<span class="inline-block px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/40 font-semibold text-[11px]">⛅ Partiel : ${appSolarPct} % solaire / ${100 - appSolarPct} % réseau</span>`;
+              } else {
+                statusBadge = `<span class="inline-block px-2 py-0.5 rounded-full bg-slate-700 text-slate-300 border border-slate-600 font-semibold text-[11px]">🔌 100 % soutiré au réseau</span>`;
+              }
+            }
+
+            tooltip.innerHTML = `
+              <div class="flex items-center gap-2 mb-1">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${color}"></span>
+                <span class="font-bold text-white text-sm leading-tight">${name}</span>
+              </div>
+              <div class="text-[11px] text-slate-300 mb-2">${cat}</div>
+              ${statusBadge ? `<div class="mb-2">${statusBadge}</div>` : ''}
+              <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs border-t border-slate-700 pt-1.5">
+                <span class="text-slate-400">Puissance P :</span>
+                <span class="font-mono font-semibold text-right">${formatPower(power)}</span>
+                <span class="text-slate-400">Durée Δt :</span>
+                <span class="font-mono font-semibold text-right">${dur.toFixed(2)} h</span>
+                <span class="text-slate-400">Plage horaire :</span>
+                <span class="font-mono text-right">${formatHoursToHHMM(t0)} – ${formatHoursToHHMM(t1)}</span>
+                <span class="text-slate-400">Énergie E = P×Δt :</span>
+                <span class="font-mono font-bold text-sky-300 text-right">${(appWh / 1000).toFixed(2)} kWh (${Math.round(appWh)} Wh)</span>
+                ${state.pvActive ? `
+                  <span class="text-amber-300">Part solaire :</span>
+                  <span class="font-mono font-semibold text-amber-300 text-right">${(appSolarWh / 1000).toFixed(2)} kWh (${Math.round(appSolarWh)} Wh)</span>
+                  <span class="text-slate-400">Part réseau :</span>
+                  <span class="font-mono text-slate-300 text-right">${(appGridWh / 1000).toFixed(2)} kWh (${Math.round(appGridWh)} Wh)</span>
+                ` : ''}
+              </div>
+            `;
+
+            tooltip.classList.remove('hidden');
+            const pad = 14;
+            let left = e.clientX + pad;
+            let top = e.clientY + pad;
+            if (left + 280 > window.innerWidth) left = e.clientX - 285;
+            if (top + 210 > window.innerHeight) top = e.clientY - 215;
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+          });
+
+          el.addEventListener('mouseleave', () => {
+            tooltip.classList.add('hidden');
+          });
+        });
+      }
+
+      // =========================================================================
+      // 6. MISE À JOUR DE L'INTERFACE (KPIs, LÉGENDE, TABLEAU)
+      // =========================================================================
+      function updateAll() {
+        const sim = computeSimulation();
+
+        const pvCheck = document.getElementById('togglePvActive');
+        const pvLabel = document.getElementById('pvActiveLabel');
+        const pvBody = document.getElementById('pvControlsBody');
+        pvCheck.checked = !!state.pvActive;
+
+        if (state.pvActive) {
+          pvLabel.textContent = 'Solaire PV activé (' + state.pvKwc + ' kWc)';
+          pvLabel.className = 'text-xs font-bold text-amber-800';
+          pvBody.classList.remove('opacity-45', 'pointer-events-none');
+        } else {
+          pvLabel.textContent = 'Solaire PV désactivé';
+          pvLabel.className = 'text-xs font-bold text-slate-600';
+          pvBody.classList.add('opacity-45', 'pointer-events-none');
+        }
+
+        document.querySelectorAll('.pv-btn').forEach((btn) => {
+          const val = Number(btn.getAttribute('data-pv'));
+          if (val === state.pvKwc) {
+            btn.className = 'pv-btn py-2 px-2 rounded-xl text-xs font-bold border border-amber-500 bg-amber-500 text-white shadow-sm transition text-center';
+          } else {
+            btn.className = 'pv-btn py-2 px-2 rounded-xl text-xs font-semibold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-amber-50 hover:border-amber-300 transition text-center';
+          }
+        });
+
+        const totalWh = sim.totalConsumedKwh * 1000;
+        document.getElementById('kpiTotalKwh').textContent = sim.totalConsumedKwh.toFixed(2) + ' kWh';
+        const monthlyKwh = sim.totalConsumedKwh * 30;
+        document.getElementById('kpiTotalWh').textContent = 'soit ' + monthlyKwh.toFixed(1) + ' kWh / mois (30 j)';
+
+        document.getElementById('kpiPeakPower').textContent = formatPower(sim.maxTotalPower);
+        document.getElementById('kpiPeakTime').textContent =
+          sim.maxTotalPower > 0 ? 'Pic observé à ' + formatHoursToHHMM(sim.maxPowerTime) : 'Aucun appel de puissance';
+
+        const avgPowerW = totalWh / 24;
+        document.getElementById('kpiAvgPower').textContent = formatPower(avgPowerW);
+
+        const pvCards = ['cardKpiPvProd', 'cardKpiAuto'];
+        if (state.pvActive) {
+          pvCards.forEach((id) => document.getElementById(id).classList.remove('opacity-45'));
+          document.getElementById('kpiPvProd').textContent = sim.totalPvProdKwh.toFixed(2) + ' kWh';
+          document.getElementById('kpiPvMax').textContent = 'Crête nette : ' + (sim.maxPvPower / 1000).toFixed(2) + ' kW';
+
+          document.getElementById('kpiAutoKwh').textContent = sim.totalAutoConsumedKwh.toFixed(2) + ' kWh';
+          document.getElementById('kpiAutoRates').textContent =
+            'Couverture : ' + sim.selfSufficiencyRate.toFixed(0) + '% | Conso PV : ' + sim.selfConsumptionRate.toFixed(0) + '%';
+        } else {
+          pvCards.forEach((id) => document.getElementById(id).classList.add('opacity-45'));
+          document.getElementById('kpiPvProd').textContent = '0.00 kWh';
+          document.getElementById('kpiPvMax').textContent = 'Activez le solaire PV ci-dessus';
+          document.getElementById('kpiAutoKwh').textContent = '0.00 kWh';
+          document.getElementById('kpiAutoRates').textContent = 'Couverture : 0% | Conso PV : 0%';
+        }
+
+        document.getElementById('kpiGridImport').textContent = sim.totalGridImportKwh.toFixed(2) + ' kWh';
+        document.getElementById('kpiGridExport').textContent = 'Surplus PV : ' + sim.totalGridExportKwh.toFixed(2) + ' kWh';
+
+        document.getElementById('footerGridImport').textContent = sim.totalGridImportKwh.toFixed(2) + ' kWh';
+        document.getElementById('footerGridExport').textContent = sim.totalGridExportKwh.toFixed(2) + ' kWh';
+
+        renderLegend();
+        renderChart(sim);
+        renderTable(sim.totalConsumedKwh, sim.appSolarStats);
+        updateFormPreview();
+      }
+
+      function renderLegend() {
+        const container = document.getElementById('categoryLegend');
+        let html = '';
+
+        CATEGORY_ORDER.forEach((catKey) => {
+          const cat = CATEGORIES[catKey];
+          const isHidden = !!state.hiddenCategories[catKey];
+          html += `
+            <button type="button" data-toggle-cat="${catKey}"
+              class="px-2.5 py-1 rounded-full border text-xs font-medium flex items-center gap-1.5 transition ${
+                isHidden
+                  ? 'bg-slate-100 border-slate-200 text-slate-400 line-through'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs'
+              }">
+              <span class="w-2.5 h-2.5 rounded-full" style="background:${isHidden ? '#cbd5e1' : cat.color}"></span>
+              ${cat.label}
+            </button>
+          `;
+        });
+
+        if (state.pvActive) {
+          html += `
+            <span class="px-2.5 py-1 rounded-full border border-amber-300 bg-amber-50 text-amber-800 text-xs font-semibold flex items-center gap-1.5">
+              <span class="w-3 h-0.5 bg-amber-600 inline-block"></span>
+              Courbe P<sub>PV</sub>(t) (${state.pvKwc} kWc)
+            </span>
+          `;
+        }
+
+        container.innerHTML = html;
+
+        container.querySelectorAll('[data-toggle-cat]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const k = btn.getAttribute('data-toggle-cat');
+            state.hiddenCategories[k] = !state.hiddenCategories[k];
+            updateAll();
+          });
+        });
+      }
+
+      function renderTable(totalConsumedKwh, appSolarStats) {
+        const tbody = document.getElementById('applianceTableBody');
+        document.getElementById('applianceCount').textContent = state.appliances.length;
+
+        let list = state.appliances.map((item, idx) => ({ item, idx }));
+        if (state.tableFilterCategory !== 'all') {
+          list = list.filter((entry) => entry.item.category === state.tableFilterCategory);
+        }
+
+        list.sort((e1, e2) => {
+          const a = e1.item;
+          const b = e2.item;
+          switch (state.tableSortBy) {
+            case 'start':
+              return a.start - b.start;
+            case 'energy':
+              return (b.power * b.duration) - (a.power * a.duration);
+            case 'power':
+              return b.power - a.power;
+            case 'duration':
+              return b.duration - a.duration;
+            case 'category':
+              return CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category);
+            case 'added':
+            default:
+              return e1.idx - e2.idx;
+          }
+        });
+
+        if (list.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" class="py-8 text-center text-sm text-slate-400">
+                Aucun appareil enregistré pour le moment. Utilisez le formulaire à gauche ou cliquez sur « Charger un scénario exemple (Foyer mauricien) ».
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = list.map(({ item: app }) => {
+          const cat = CATEGORIES[app.category] || CATEGORIES.froid;
+          const wh = app.power * app.duration;
+          const kwh = wh / 1000;
+          const share = totalConsumedKwh > 0 ? (kwh / totalConsumedKwh) * 100 : 0;
+          const endHour = app.start + app.duration;
+
+          const st = (appSolarStats && appSolarStats[app.id]) || { totalWh: wh, solarWh: 0, gridWh: wh };
+          const isFullySolar = st.gridWh < 0.5 && st.solarWh > 0;
+          const isPartiallySolar = !isFullySolar && st.solarWh >= 0.5;
+          const solarPct = st.totalWh > 0 ? (isFullySolar ? 100 : Math.min(99, Math.max(1, Math.round((st.solarWh / st.totalWh) * 100)))) : 0;
+
+          let solarStatusHtml = `<span class="text-[11px] text-slate-400">PV désactivé</span>`;
+          if (state.pvActive) {
+            if (state.hiddenCategories[app.category]) {
+              solarStatusHtml = `<span class="text-[11px] text-slate-400">Masqué</span>`;
+            } else if (isFullySolar) {
+              solarStatusHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-300">☀️ 100 % Solaire</span>`;
+            } else if (isPartiallySolar) {
+              solarStatusHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">⛅ ${solarPct} % Solaire</span>`;
+            } else {
+              solarStatusHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">🔌 100 % Réseau</span>`;
+            }
+          }
+
+          return `
+            <tr class="hover:bg-slate-50/80 transition">
+              <td class="py-2.5 px-2">
+                <div class="font-semibold text-slate-900">${escapeHtml(app.name)}</div>
+                <span class="inline-block mt-0.5 px-2 py-0.5 text-[10px] font-semibold rounded-full border ${cat.badgeBg}">
+                  ${cat.label}
+                </span>
+              </td>
+              <td class="py-2.5 px-2 text-right">
+                <input type="number" data-inline-power="${app.id}" min="1" max="30000" step="1" value="${app.power}"
+                  aria-label="Puissance en W pour ${escapeHtml(app.name)}"
+                  class="w-20 text-right font-mono text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:border-blue-500 outline-none" />
+                <span class="text-[11px] text-slate-500 ml-0.5">W</span>
+              </td>
+              <td class="py-2.5 px-2 text-center">
+                <div class="inline-flex items-center gap-1 bg-slate-100 rounded-lg px-1.5 py-0.5">
+                  <button type="button" data-shift="-0.5" data-id="${app.id}" class="px-1.5 py-0.5 text-[11px] text-slate-700 hover:text-blue-600 font-semibold rounded hover:bg-white transition" title="Avancer de 30 min">◀ -30m</button>
+                  <span class="font-mono text-xs text-slate-800 px-1">
+                    ${formatHoursToHHMM(app.start)}–${formatHoursToHHMM(endHour)}
+                  </span>
+                  <button type="button" data-shift="0.5" data-id="${app.id}" class="px-1.5 py-0.5 text-[11px] text-slate-700 hover:text-blue-600 font-semibold rounded hover:bg-white transition" title="Décaler de 30 min">+30m ▶</button>
+                </div>
+              </td>
+              <td class="py-2.5 px-2 text-right">
+                <input type="number" data-inline-dur="${app.id}" min="0.05" max="24" step="0.05" value="${app.duration}"
+                  aria-label="Durée en heures pour ${escapeHtml(app.name)}"
+                  class="w-16 text-right font-mono text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:border-blue-500 outline-none" />
+                <span class="text-[11px] text-slate-500 ml-0.5">h</span>
+              </td>
+              <td class="py-2.5 px-2 text-center">
+                ${solarStatusHtml}
+              </td>
+              <td class="py-2.5 px-2 text-right font-mono text-xs font-bold text-blue-700">
+                ${kwh.toFixed(2)} kWh
+                <div class="text-[10px] font-normal text-slate-500">${Math.round(wh)} Wh (${share.toFixed(1)}%)</div>
+              </td>
+              <td class="py-2.5 px-2 text-right whitespace-nowrap">
+                <button type="button" data-edit="${app.id}" class="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition" title="Modifier dans le formulaire">
+                  <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button type="button" data-delete="${app.id}" class="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition" title="Supprimer">
+                  <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        tbody.querySelectorAll('[data-shift]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const delta = Number(btn.getAttribute('data-shift'));
+            const item = state.appliances.find((a) => a.id === id);
+            if (item) {
+              item.start = Math.round((((item.start + delta) % 24) + 24) % 24 * 4) / 4;
+              if (item.start >= 24) item.start = 0;
+              updateAll();
+            }
+          });
+        });
+
+        tbody.querySelectorAll('[data-inline-power]').forEach((inp) => {
+          inp.addEventListener('change', () => {
+            const id = inp.getAttribute('data-inline-power');
+            const item = state.appliances.find((a) => a.id === id);
+            if (item) {
+              item.power = Math.max(1, Number(inp.value) || 1);
+              updateAll();
+            }
+          });
+        });
+
+        tbody.querySelectorAll('[data-inline-dur]').forEach((inp) => {
+          inp.addEventListener('change', () => {
+            const id = inp.getAttribute('data-inline-dur');
+            const item = state.appliances.find((a) => a.id === id);
+            if (item) {
+              item.duration = Math.min(24, Math.max(0.05, Number(inp.value) || 0.05));
+              updateAll();
+            }
+          });
+        });
+
+        tbody.querySelectorAll('[data-edit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            startEditAppliance(btn.getAttribute('data-edit'));
+          });
+        });
+
+        tbody.querySelectorAll('[data-delete]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-delete');
+            state.appliances = state.appliances.filter((a) => a.id !== id);
+            if (document.getElementById('editApplianceId').value === id) {
+              resetForm();
+            }
+            updateAll();
+            showToast('Appareil supprimé');
+          });
+        });
+      }
+
+      // =========================================================================
+      // 7. GESTION DU FORMULAIRE D'AJOUT / ÉDITION ET SUGGESTIONS
+      // =========================================================================
+      function populateStartTimeSelect() {
+        const select = document.getElementById('appStartTime');
+        let optionsHtml = '';
+        for (let m = 0; m < 24 * 60; m += 15) {
+          const dec = m / 60;
+          optionsHtml += `<option value="${dec}">${formatHoursToHHMM(dec)}</option>`;
+        }
+        select.innerHTML = optionsHtml;
+        select.value = '12';
+      }
+
+      function updateFormPreview() {
+        const p = Number(document.getElementById('appPower').value) || 0;
+        const d = Number(document.getElementById('appDuration').value) || 0;
+        const start = Number(document.getElementById('appStartTime').value) || 0;
+
+        const wh = p * d;
+        document.getElementById('formEnergyPreview').textContent = formatEnergy(wh);
+        document.getElementById('previewTimeRange').textContent =
+          `${formatHoursToHHMM(start)} → ${formatHoursToHHMM(start + d)}`;
+      }
+
+      function startEditAppliance(id) {
+        const item = state.appliances.find((a) => a.id === id);
+        if (!item) return;
+
+        document.getElementById('editApplianceId').value = item.id;
+        document.getElementById('appName').value = item.name;
+        document.getElementById('appCategory').value = item.category;
+        document.getElementById('appPower').value = item.power;
+        document.getElementById('appDuration').value = item.duration;
+
+        const snappedStart = (Math.round(item.start * 4) / 4) % 24;
+        document.getElementById('appStartTime').value = String(snappedStart);
+
+        document.getElementById('formTitle').textContent = 'Modifier l’appareil';
+        document.getElementById('btnSubmitForm').textContent = 'Enregistrer les modifications';
+        document.getElementById('btnCancelEdit').classList.remove('hidden');
+        updateFormPreview();
+      }
+
+      function resetForm() {
+        document.getElementById('editApplianceId').value = '';
+        document.getElementById('applianceForm').reset();
+        document.getElementById('appStartTime').value = '12';
+        document.getElementById('formTitle').textContent = 'Ajouter un appareil';
+        document.getElementById('btnSubmitForm').innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Ajouter au profil 24h
+        `;
+        document.getElementById('btnCancelEdit').classList.add('hidden');
+        updateFormPreview();
+      }
+
+      function renderQuickPresets() {
+        const container = document.getElementById('quickPresets');
+        container.innerHTML = QUICK_PRESETS.map((p, idx) => `
+          <button type="button" data-preset="${idx}"
+            class="px-2.5 py-1 text-[11px] font-medium bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 rounded-lg border border-slate-200 transition">
+            + ${escapeHtml(p.name)}
+          </button>
+        `).join('');
+
+        container.querySelectorAll('[data-preset]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const p = QUICK_PRESETS[Number(btn.getAttribute('data-preset'))];
+            state.appliances.push({
+              id: 'app-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+              name: p.name.replace(/\s*\([^)]*\)$/, ''),
+              category: p.category,
+              power: p.power,
+              start: p.start,
+              duration: p.duration
+            });
+            updateAll();
+            showToast(`« ${p.name} » ajouté au profil 24h`);
+          });
+        });
+      }
+
+      // =========================================================================
+      // 8. EXPORT HTML AUTONOME & IMPORT/EXPORT JSON
+      // =========================================================================
+      function exportStandaloneHtml() {
+        try {
+          const docClone = document.documentElement.cloneNode(true);
+          const embeddedScript = docClone.querySelector('#embedded-app-state');
+          if (embeddedScript) {
+            embeddedScript.textContent = JSON.stringify(state);
+          }
+          const tooltipClone = docClone.querySelector('#chartTooltip');
+          if (tooltipClone) tooltipClone.classList.add('hidden');
+          const toastClone = docClone.querySelector('#toastBanner');
+          if (toastClone) toastClone.classList.add('hidden');
+
+          const fullHtml = '<!DOCTYPE html>\n' + docClone.outerHTML;
+          const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'simulateur_energetique_foyer_mauricien_pv.html';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('Fichier .html autonome téléchargé avec votre configuration !');
+        } catch (err) {
+          console.error(err);
+          showToast('Erreur lors de la génération du fichier HTML', true);
+        }
+      }
+
+      function exportJson() {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'configuration_energie_foyer_mauricien.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Configuration JSON exportée');
+      }
+
+      // =========================================================================
+      // 9. SÉCURITÉ / ÉCHAPPEMENT HTML
+      // =========================================================================
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function truncateText(str, maxLen) {
+        if (maxLen < 4) return '';
+        return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
+      }
+
+      // =========================================================================
+      // 10. INITIALISATION DES ÉCOUTEURS D'ÉVÉNEMENTS
+      // =========================================================================
+      function initEventListeners() {
+        document.getElementById('togglePvActive').addEventListener('change', (e) => {
+          state.pvActive = e.target.checked;
+          updateAll();
+        });
+
+        document.querySelectorAll('.pv-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            state.pvKwc = Number(btn.getAttribute('data-pv'));
+            state.pvActive = true;
+            updateAll();
+          });
+        });
+
+        const pvEffInput = document.getElementById('pvEfficiency');
+        pvEffInput.value = state.pvEfficiency;
+        document.getElementById('pvEfficiencyVal').textContent = state.pvEfficiency + '%';
+        pvEffInput.addEventListener('input', (e) => {
+          state.pvEfficiency = Number(e.target.value);
+          document.getElementById('pvEfficiencyVal').textContent = state.pvEfficiency + '%';
+          updateAll();
+        });
+
+        const stackSelect = document.getElementById('stackOrder');
+        stackSelect.value = state.stackOrder;
+        stackSelect.addEventListener('change', (e) => {
+          state.stackOrder = e.target.value;
+          updateAll();
+        });
+
+        const toggleClipCheckbox = document.getElementById('toggleSolarClip');
+        toggleClipCheckbox.checked = state.showSolarClip !== false;
+        toggleClipCheckbox.addEventListener('change', (e) => {
+          state.showSolarClip = e.target.checked;
+          updateAll();
+        });
+
+        document.getElementById('tableFilterCategory').addEventListener('change', (e) => {
+          state.tableFilterCategory = e.target.value;
+          updateAll();
+        });
+
+        document.getElementById('tableSortBy').addEventListener('change', (e) => {
+          state.tableSortBy = e.target.value;
+          updateAll();
+        });
+
+        ['appPower', 'appDuration', 'appStartTime'].forEach((id) => {
+          document.getElementById(id).addEventListener('input', updateFormPreview);
+          document.getElementById(id).addEventListener('change', updateFormPreview);
+        });
+
+        document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
+
+        document.getElementById('applianceForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const editId = document.getElementById('editApplianceId').value;
+          const name = document.getElementById('appName').value.trim();
+          const category = document.getElementById('appCategory').value;
+          const power = Math.max(1, Number(document.getElementById('appPower').value) || 0);
+          const duration = Math.min(24, Math.max(0.05, Number(document.getElementById('appDuration').value) || 0));
+          const start = Number(document.getElementById('appStartTime').value) || 0;
+
+          if (!name) return;
+
+          if (editId) {
+            const idx = state.appliances.findIndex((a) => a.id === editId);
+            if (idx !== -1) {
+              state.appliances[idx] = { id: editId, name, category, power, start, duration };
+              showToast(`Appareil « ${name} » mis à jour`);
+            }
+          } else {
+            state.appliances.push({
+              id: 'app-' + Date.now(),
+              name,
+              category,
+              power,
+              start,
+              duration
+            });
+            showToast(`Appareil « ${name} » ajouté`);
+          }
+
+          resetForm();
+          updateAll();
+        });
+
+        document.getElementById('btnLoadExample').addEventListener('click', () => {
+          state.appliances = JSON.parse(JSON.stringify(EXAMPLE_APPLIANCES));
+          state.hiddenCategories = {};
+          resetForm();
+          updateAll();
+          showToast('Scénario exemple (Foyer mauricien) chargé');
+        });
+
+        document.getElementById('btnClearAll').addEventListener('click', () => {
+          state = createBlankState();
+          document.getElementById('pvEfficiency').value = state.pvEfficiency;
+          document.getElementById('pvEfficiencyVal').textContent = state.pvEfficiency + '%';
+          document.getElementById('stackOrder').value = state.stackOrder;
+          document.getElementById('toggleSolarClip').checked = true;
+          resetForm();
+          updateAll();
+          showToast('Graphique et inventaire remis à l’état vierge');
+        });
+
+        document.getElementById('btnExportJson').addEventListener('click', exportJson);
+        document.getElementById('btnExportHtml').addEventListener('click', exportStandaloneHtml);
+
+        document.getElementById('inputImportJson').addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            try {
+              const imported = JSON.parse(ev.target.result);
+              if (imported && Array.isArray(imported.appliances)) {
+                state = Object.assign(createBlankState(), imported);
+                document.getElementById('pvEfficiency').value = state.pvEfficiency;
+                document.getElementById('pvEfficiencyVal').textContent = state.pvEfficiency + '%';
+                document.getElementById('stackOrder').value = state.stackOrder;
+                document.getElementById('toggleSolarClip').checked = state.showSolarClip !== false;
+                updateAll();
+                showToast('Configuration JSON importée avec succès');
+              } else {
+                showToast('Format JSON invalide', true);
+              }
+            } catch (err) {
+              showToast('Erreur de lecture du fichier JSON', true);
+            }
+          };
+          reader.readAsText(file);
+          e.target.value = '';
+        });
+
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => {
+            renderChart(computeSimulation());
+          }, 80);
+        });
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        populateStartTimeSelect();
+        renderQuickPresets();
+        initEventListeners();
+        updateAll();
+      });
+    })();
+  </script>
+</body>
+</html>
